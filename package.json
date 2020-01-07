@@ -1,0 +1,17 @@
+{
+  "name": "unelap-server",
+  "version": "1.0.0",
+  "description": "Signaling server for unelap",
+  "main": "main.js",
+  "scripts": {
+    "start": "node index.js",
+  },
+  "repository": "",
+  "keywords": [
+  ],
+  "author": "paripsky",
+  "license": "MIT",
+  "dependencies": {
+	"ws": "^7.2.1"
+  }
+}
