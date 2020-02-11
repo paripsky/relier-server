@@ -1,11 +1,12 @@
-//require our websocket library
-var WebSocketServer = require('ws').Server;
+const { Server: WebSocketServer } = require('ws');
+const { generateId, hash } = require('./utils');
 
-//creating a websocket server at port 9090
-var wss = new WebSocketServer({ port: 9090 });
+const appSecret = hash('unelap');
 
-//all connected to the server users
-var users = {};
+const wss = new WebSocketServer({ port: 9000 });
+
+const users = new Map();
+const rooms = new Map();
 
 //when a user connects to our sever
 wss.on('connection', function(connection) {
@@ -13,10 +14,11 @@ wss.on('connection', function(connection) {
 
   //when server gets a message from a connected user
   connection.on('message', function(message) {
-    var data;
+    let data;
     //accepting only JSON messages
     try {
       data = JSON.parse(message);
+      console.log(`${data.type} request: secret is ${data.secret}`);
     } catch (e) {
       console.log('Invalid JSON');
       data = {};
@@ -27,87 +29,99 @@ wss.on('connection', function(connection) {
       //when a user tries to login
 
       case 'login':
-        console.log('User logged', data.name);
+        {
+          const { secret, password } = data;
+          const token = hash(`${secret}${password}${appSecret}`);
 
-        //if anyone is logged in with this username then refuse
-        if (users[data.name]) {
+          if (users.has(secret)) {
+            if (users.get(secret) === password) {
+              const room = rooms.get(token);
+              rooms.set(token, [...room, connection]);
+            } else {
+              sendTo(connection, {
+                type: 'login',
+                error: 'wrong password',
+                success: false
+              });
+              return;
+            }
+          } else {
+            users.set(secret, password);
+            rooms.set(token, [connection]);
+          }
+
           sendTo(connection, {
             type: 'login',
-            success: false
-          });
-        } else {
-          //save user connection on the server
-          users[data.name] = connection;
-          connection.name = data.name;
-
-          sendTo(connection, {
-            type: 'login',
-            success: true
+            token
           });
         }
-
         break;
 
       case 'offer':
-        //for ex. UserA wants to call UserB
-        console.log('Sending offer to: ', data.name);
+        {
+          const { token } = data;
 
-        //if UserB exists then send him offer details
-        var conn = users[data.name];
+          const room = rooms.get(token);
+          const otherConnection = room.find(conn => conn !== connection);
+          console.log('Sending offer to: ', otherConnection);
 
-        if (conn != null) {
-          //setting that UserA connected with UserB
-          connection.otherName = data.name;
-
-          sendTo(conn, {
-            type: 'offer',
-            offer: data.offer,
-            name: connection.name
-          });
+          if (otherConnection != null) {
+            sendTo(otherConnection, {
+              type: 'offer',
+              offer: data.offer
+            });
+          }
         }
-
         break;
 
       case 'answer':
-        console.log('Sending answer to: ', data.name);
-        //for ex. UserB answers UserA
-        var conn = users[data.name];
+        {
+          const { token } = data;
 
-        if (conn != null) {
-          connection.otherName = data.name;
-          sendTo(conn, {
-            type: 'answer',
-            answer: data.answer
-          });
+          const room = rooms.get(token);
+          const otherConnection = room.find(conn => conn !== connection);
+          console.log('Sending answer to: ', otherConnection);
+
+          if (otherConnection != null) {
+            sendTo(otherConnection, {
+              type: 'answer',
+              answer: data.answer
+            });
+          }
         }
-
         break;
 
       case 'candidate':
-        console.log('Sending candidate to:', data.name);
-        var conn = users[data.name];
+        {
+          const { token } = data;
 
-        if (conn != null) {
-          sendTo(conn, {
-            type: 'candidate',
-            candidate: data.candidate
-          });
+          const room = rooms.get(token);
+          const otherConnection = room.find(conn => conn !== connection);
+          console.log('Sending candidate to:', otherConnection);
+
+          if (otherConnection != null) {
+            sendTo(otherConnection, {
+              type: 'candidate',
+              candidate: data.candidate
+            });
+          }
         }
-
         break;
 
       case 'leave':
-        console.log('Disconnecting from', data.name);
-        var conn = users[data.name];
-        conn.otherName = null;
+        {
+          const { token } = data;
 
-        //notify the other user so he can disconnect his peer connection
-        if (conn != null) {
-          sendTo(conn, {
-            type: 'leave'
-          });
+          const room = rooms.get(token);
+          const otherConnection = room.find(conn => conn !== connection);
+          console.log('Disconnecting from', otherConnection);
+
+          if (otherConnection != null) {
+            sendTo(otherConnection, {
+              type: 'leave'
+            });
+          }
         }
-
         break;
 
       default:
@@ -128,7 +142,7 @@ wss.on('connection', function(connection) {
 
       if (connection.otherName) {
         console.log('Disconnecting from ', connection.otherName);
-        var conn = users[connection.otherName];
+        let conn = users[connection.otherName];
         conn.otherName = null;
 
         if (conn != null) {
@@ -139,8 +153,6 @@ wss.on('connection', function(connection) {
       }
     }
   });
-
-  //   connection.send('Hello world');
 });
 
 function sendTo(connection, message) {
