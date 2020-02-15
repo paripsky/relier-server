@@ -1,24 +1,29 @@
-const { Server: WebSocketServer } = require('ws');
-const { generateId, hash } = require('./utils');
-
+import WebSocket, { Server as WebSocketServer } from 'ws';
+import { generateId, hash } from './utils';
 const appSecret = hash('unelap');
 
-const wss = new WebSocketServer({ port: 9000 });
+const port = 9000;
 
-const users = new Map();
-const rooms = new Map();
+const wss = new WebSocketServer({ port });
+
+const users = new Map<string, string>();
+const rooms = new Map<string, WebSocket[]>();
+
+wss.on('listening', () => {
+  console.info(`Listening on port ${port}`);
+});
 
 //when a user connects to our sever
 wss.on('connection', function(connection) {
   console.log('User connected');
 
   //when server gets a message from a connected user
-  connection.on('message', function(message) {
+  connection.on('message', function(message: any) {
     let data;
     //accepting only JSON messages
     try {
       data = JSON.parse(message);
-      console.log(`${data.type} request: secret is ${data.secret}`);
+      console.log(`${data.type} request: data is `, data);
     } catch (e) {
       console.log('Invalid JSON');
       data = {};
@@ -35,7 +40,7 @@ wss.on('connection', function(connection) {
 
           if (users.has(secret)) {
             if (users.get(secret) === password) {
-              const room = rooms.get(token);
+              const room = rooms.get(token) || [];
               rooms.set(token, [...room, connection]);
             } else {
               sendTo(connection, {
@@ -61,7 +66,7 @@ wss.on('connection', function(connection) {
         {
           const { token } = data;
 
-          const room = rooms.get(token);
+          const room = rooms.get(token) || [];
           const otherConnection = room.find(conn => conn !== connection);
           console.log('Sending offer to: ', otherConnection);
 
@@ -78,7 +83,7 @@ wss.on('connection', function(connection) {
         {
           const { token } = data;
 
-          const room = rooms.get(token);
+          const room = rooms.get(token) || [];
           const otherConnection = room.find(conn => conn !== connection);
           console.log('Sending answer to: ', otherConnection);
 
@@ -95,7 +100,7 @@ wss.on('connection', function(connection) {
         {
           const { token } = data;
 
-          const room = rooms.get(token);
+          const room = rooms.get(token) || [];
           const otherConnection = room.find(conn => conn !== connection);
           console.log('Sending candidate to:', otherConnection);
 
@@ -112,7 +117,7 @@ wss.on('connection', function(connection) {
         {
           const { token } = data;
 
-          const room = rooms.get(token);
+          const room = rooms.get(token) || [];
           const otherConnection = room.find(conn => conn !== connection);
           console.log('Disconnecting from', otherConnection);
 
@@ -136,25 +141,25 @@ wss.on('connection', function(connection) {
 
   //when user exits, for example closes a browser window
   //this may help if we are still in "offer","answer" or "candidate" state
-  connection.on('close', function() {
-    if (connection.name) {
-      delete users[connection.name];
+  // connection.on('close', function() {
+  //   if (connection.name) {
+  //     delete users[connection.name];
 
-      if (connection.otherName) {
-        console.log('Disconnecting from ', connection.otherName);
-        let conn = users[connection.otherName];
-        conn.otherName = null;
+  //     if (connection.otherName) {
+  //       console.log('Disconnecting from ', connection.otherName);
+  //       let conn = users[connection.otherName];
+  //       conn.otherName = null;
 
-        if (conn != null) {
-          sendTo(conn, {
-            type: 'leave'
-          });
-        }
-      }
-    }
-  });
+  //       if (conn != null) {
+  //         sendTo(conn, {
+  //           type: 'leave'
+  //         });
+  //       }
+  //     }
+  //   }
+  // });
 });
 
-function sendTo(connection, message) {
+function sendTo(connection: WebSocket, message: any) {
   connection.send(JSON.stringify(message));
 }

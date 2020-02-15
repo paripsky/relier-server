@@ -1,17 +1,12 @@
-const crypto = require('crypto');
+import crypto from 'crypto';
 
-const generateId = () => {
+export const generateId = () => {
   return crypto.randomBytes(16).toString('base64');
 };
 
-const hash = toHash => {
+export const hash = (toHash: string) => {
   return crypto
     .createHash('sha256')
     .update(toHash)
     .digest('base64');
-};
-
-module.exports = {
-  generateId,
-  hash
 };
