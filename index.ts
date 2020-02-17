@@ -9,6 +9,17 @@ const wss = new WebSocketServer({ port });
 const users = new Map<string, string>();
 const rooms = new Map<string, WebSocket[]>();
 
+const getOtherConnection = (
+  rooms: Map<string, WebSocket[]>,
+  connection: WebSocket,
+  token: string
+) => {
+  const room = rooms.get(token) || [];
+  const otherConnection = room.find(conn => conn !== connection);
+
+  return otherConnection;
+};
+
 wss.on('listening', () => {
   console.info(`Listening on port ${port}`);
 });
@@ -66,8 +77,7 @@ wss.on('connection', function(connection) {
         {
           const { token } = data;
 
-          const room = rooms.get(token) || [];
-          const otherConnection = room.find(conn => conn !== connection);
+          const otherConnection = getOtherConnection(rooms, connection, token);
           console.log('Sending offer to: ', otherConnection);
 
           if (otherConnection != null) {
@@ -83,8 +93,7 @@ wss.on('connection', function(connection) {
         {
           const { token } = data;
 
-          const room = rooms.get(token) || [];
-          const otherConnection = room.find(conn => conn !== connection);
+          const otherConnection = getOtherConnection(rooms, connection, token);
           console.log('Sending answer to: ', otherConnection);
 
           if (otherConnection != null) {
@@ -100,8 +109,7 @@ wss.on('connection', function(connection) {
         {
           const { token } = data;
 
-          const room = rooms.get(token) || [];
-          const otherConnection = room.find(conn => conn !== connection);
+          const otherConnection = getOtherConnection(rooms, connection, token);
           console.log('Sending candidate to:', otherConnection);
 
           if (otherConnection != null) {
@@ -117,8 +125,7 @@ wss.on('connection', function(connection) {
         {
           const { token } = data;
 
-          const room = rooms.get(token) || [];
-          const otherConnection = room.find(conn => conn !== connection);
+          const otherConnection = getOtherConnection(rooms, connection, token);
           console.log('Disconnecting from', otherConnection);
 
           if (otherConnection != null) {
