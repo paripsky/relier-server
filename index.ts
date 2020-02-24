@@ -8,6 +8,17 @@ const wss = new WebSocketServer({ port });
 
 const users = new Map<string, string>();
 const rooms = new Map<string, WebSocket[]>();
+/**
+ * instead of rooms, leave just the users map
+ * instead of secret, on connect the user will send the other users secret and pass of the one that is hosting
+ * on connect, the username + pass will be checked and a token will be given?
+ * no rooms, just user to user?
+ * or maybe when the connection is made their both added to a room?
+ * think of the best way to do this
+ * electron should auto login and the host button should just host?
+ * auto generate username & password or let the user pick a username?
+ * how to implement tokens better? set a time limit for them? save some data on the token? json web token with a user field?
+ */
 
 const getOtherConnection = (
   rooms: Map<string, WebSocket[]>,
