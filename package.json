@@ -1,7 +1,7 @@
 {
-  "name": "unelap-server",
+  "name": "relier-server",
   "version": "1.0.0",
-  "description": "Signaling server for unelap",
+  "description": "Signaling server for relier",
   "main": "main.js",
   "scripts": {
     "start": "node dist/index.js",

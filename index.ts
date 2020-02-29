@@ -1,6 +1,6 @@
 import WebSocket, { Server as WebSocketServer } from 'ws';
 import { generateId, hash } from './utils';
-const appSecret = hash('unelap');
+const appSecret = hash('relier');
 
 const port = 9000;
 
