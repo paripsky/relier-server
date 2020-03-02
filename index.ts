@@ -1,5 +1,6 @@
 import WebSocket, { Server as WebSocketServer } from 'ws';
 import { generateId, hash } from './utils';
+// jwt token instead of hash
 const appSecret = hash('relier');
 
 const port = 9000;
@@ -159,23 +160,24 @@ wss.on('connection', function(connection) {
 
   //when user exits, for example closes a browser window
   //this may help if we are still in "offer","answer" or "candidate" state
-  // connection.on('close', function() {
-  //   if (connection.name) {
-  //     delete users[connection.name];
+  connection.on('close', function() {
+    console.log('connection closed', connection);
+    // if (connection.name) {
+    //   delete users[connection.name];
 
-  //     if (connection.otherName) {
-  //       console.log('Disconnecting from ', connection.otherName);
-  //       let conn = users[connection.otherName];
-  //       conn.otherName = null;
+    //   if (connection.otherName) {
+    //     console.log('Disconnecting from ', connection.otherName);
+    //     let conn = users[connection.otherName];
+    //     conn.otherName = null;
 
-  //       if (conn != null) {
-  //         sendTo(conn, {
-  //           type: 'leave'
-  //         });
-  //       }
-  //     }
-  //   }
-  // });
+    //     if (conn != null) {
+    //       sendTo(conn, {
+    //         type: 'leave'
+    //       });
+    //     }
+    //   }
+    // }
+  });
 });
 
 function sendTo(connection: WebSocket, message: any) {
